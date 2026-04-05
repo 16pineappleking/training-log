@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Training Log" />
+  <meta name="theme-color" content="#080808" />
+  <title>Training Log</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Bebas+Neue&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; background: #080808; }
+    body { font-family: 'DM Mono', monospace; color: #eee; padding-bottom: 100px; }
+    input, select { font-family: inherit; -webkit-appearance: none; appearance: none; }
+
+```
+.header { padding: max(env(safe-area-inset-top), 20px) 18px 0; border-bottom: 1px solid #161616; }
+.header-top { padding-top: 8px; }
+.title { font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: .1em; color: #f97316; line-height: 1; }
+.subtitle { font-size: 10px; color: #444; letter-spacing: .1em; margin-top: 2px; margin-bottom: 12px; }
+
+.nav { display: flex; }
+.nav-btn { background: none; border: none; border-bottom: 2px solid transparent; color: #444; font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: .12em; cursor: pointer; padding: 10px 16px; transition: all .15s; }
+.nav-btn.active { color: #f97316; border-bottom-color: #f97316; }
+
+.content { max-width: 520px; margin: 0 auto; padding: 18px 16px; }
+
+.fl { font-size: 10px; color: #555; letter-spacing: .1em; margin-bottom: 5px; }
+input, select { background: #111; border: 1px solid #1e1e1e; color: #eee; border-radius: 7px; padding: 9px 12px; font-size: 16px; width: 100%; outline: none; transition: border .15s; }
+input:focus, select:focus { border-color: #f97316; }
+select option, select optgroup { background: #111; }
+
+.field { margin-bottom: 14px; }
+.helper { font-size: 11px; color: #444; margin-top: 6px; font-style: italic; }
+
+.set-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.set-label { font-size: 10px; color: #555; letter-spacing: .08em; width: 38px; flex-shrink: 0; }
+.set-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; flex: 1; }
+
+.btn-add { width: 100%; background: #f97316; border: none; color: #000; border-radius: 7px; padding: 14px; font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: .1em; cursor: pointer; margin-top: 4px; }
+.btn-add:active { background: #fb923c; }
+.btn-addset { background: none; border: 1px dashed #2a2a2a; color: #555; border-radius: 7px; padding: 10px; font-family: 'DM Mono', monospace; font-size: 13px; cursor: pointer; width: 100%; letter-spacing: .05em; }
+.btn-addset:active { border-color: #444; color: #aaa; }
+.rm-set { background: none; border: none; color: #3a3a3a; cursor: pointer; font-size: 18px; padding: 0 6px; line-height: 1; flex-shrink: 0; }
+.rm-set:active { color: #ef4444; }
+
+.card { background: #111; border: 1px solid #1c1c1c; border-radius: 9px; padding: 14px; }
+.card-row { display: flex; gap: 10px; align-items: flex-start; }
+.card-bar { width: 3px; align-self: stretch; border-radius: 2px; flex-shrink: 0; }
+.card-body { flex: 1; min-width: 0; }
+.card-title { font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.card-date { font-size: 10px; color: #555; flex-shrink: 0; margin-left: 8px; }
+.card-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+.set-tag { display: inline-block; background: #1a1a1a; border-radius: 4px; padding: 3px 8px; font-size: 11px; color: #666; margin-right: 4px; margin-top: 3px; }
+.card-note { font-size: 11px; color: #555; margin-top: 4px; font-style: italic; }
+.card-small-date { font-size: 10px; color: #444; margin-top: 4px; }
+.del-btn { background: none; border: 1px solid #2a1010; color: #ef4444; border-radius: 5px; padding: 5px 11px; cursor: pointer; font-size: 14px; font-family: inherit; flex-shrink: 0; }
+.del-btn:active { background: #1a0000; }
+
+.recent-label { font-size: 10px; color: #444; letter-spacing: .1em; margin-bottom: 8px; margin-top: 18px; }
+.log-list { display: flex; flex-direction: column; gap: 8px; }
+
+.filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.empty { color: #444; font-size: 13px; text-align: center; padding-top: 40px; }
+
+.stats-cat { margin-bottom: 22px; }
+.stats-cat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cat-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.cat-label { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: .12em; }
+.pill-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+.pv { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .06em; line-height: 1; }
+.pv span { font-size: 13px; }
+.pl { font-size: 10px; color: #555; letter-spacing: .08em; margin-top: 1px; }
+
+.toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #f97316; color: #000; padding: 10px 24px; border-radius: 999px; font-size: 13px; font-family: 'Bebas Neue', sans-serif; letter-spacing: .1em; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 99; }
+.toast.show { opacity: 1; }
+
+.hidden { display: none; }
+```
+
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="title">TRAINING LOG</div>
+    <div class="subtitle" id="entry-count">0 ENTRIES RECORDED</div>
+  </div>
+  <div class="nav">
+    <button class="nav-btn active" onclick="setView('log')">LOG</button>
+    <button class="nav-btn" onclick="setView('history')">HISTORY</button>
+    <button class="nav-btn" onclick="setView('stats')">STATS</button>
+  </div>
+</div>
+
+<div class="content">
+
+  <!-- LOG VIEW -->
+
+  <div id="view-log">
+    <div class="field">
+      <div class="fl">EXERCISE</div>
+      <select id="exercise-select" onchange="onExerciseChange()">
+        <optgroup label="── LEGS">
+          <option>Hip Thrust</option>
+          <option>Squat</option>
+          <option>Lateral Squat</option>
+          <option>Iso Lunge Hold</option>
+        </optgroup>
+        <optgroup label="── CHEST">
+          <option>Dumbbell Bench Press</option>
+          <option>Incline Dumbbell Bench Press</option>
+        </optgroup>
+        <optgroup label="── BACK">
+          <option>Meadows Row</option>
+          <option>Pull-Ups</option>
+        </optgroup>
+        <optgroup label="── SHOULDERS">
+          <option>Standing Overhead Press</option>
+          <option>Single Arm Kneeling Shoulder Press</option>
+        </optgroup>
+        <optgroup label="── ARMS">
+          <option>Dips</option>
+          <option>Incline Dumbbell Curl</option>
+          <option>Tricep Pushdown</option>
+        </optgroup>
+        <optgroup label="── CORE">
+          <option>Half Kneeling Landmine Rotation</option>
+        </optgroup>
+      </select>
+    </div>
+
+```
+<!-- repsonly mode -->
+<div id="mode-repsonly" class="field hidden">
+  <div class="fl">MAX BODYWEIGHT REPS (1 SET)</div>
+  <input type="number" inputmode="numeric" placeholder="e.g. 5" id="single-reps" />
+  <div class="helper">Unassisted reps only — don't count band-assisted</div>
+</div>
+
+<!-- setsrepsweight mode -->
+<div id="mode-setsrepsweight" class="field">
+  <div class="fl">SETS — reps / lbs</div>
+  <div id="sets-container-srw"></div>
+  <button class="btn-addset" id="add-set-btn-srw" onclick="addSetRow('srw')">+ add set 2</button>
+</div>
+
+<!-- setshold mode -->
+<div id="mode-setshold" class="field hidden">
+  <div class="fl">SETS — seconds / lbs</div>
+  <div id="sets-container-sh"></div>
+  <button class="btn-addset" id="add-set-btn-sh" onclick="addSetRow('sh')">+ add set 2</button>
+</div>
+
+<div class="field">
+  <div class="fl">NOTE <span style="color:#2a2a2a">— optional</span></div>
+  <input type="text" id="note-input" placeholder="PR, cue, how it felt…" />
+</div>
+
+<button class="btn-add" onclick="logEntry()">+ LOG</button>
+
+<div id="recent-section" class="hidden">
+  <div class="recent-label">RECENT</div>
+  <div class="log-list" id="recent-list"></div>
+</div>
+```
+
+  </div>
+
+  <!-- HISTORY VIEW -->
+
+  <div id="view-history" class="hidden">
+    <div class="filter-row">
+      <div>
+        <div class="fl">CATEGORY</div>
+        <select id="filter-cat" onchange="onFilterCatChange()">
+          <option>All</option>
+          <option>Legs</option><option>Chest</option><option>Back</option>
+          <option>Shoulders</option><option>Arms</option><option>Core</option>
+        </select>
+      </div>
+      <div>
+        <div class="fl">EXERCISE</div>
+        <select id="filter-ex" onchange="renderHistory()">
+          <option>All</option>
+        </select>
+      </div>
+    </div>
+    <div class="log-list" id="history-list"></div>
+  </div>
+
+  <!-- STATS VIEW -->
+
+  <div id="view-stats" class="hidden">
+    <div id="stats-content"></div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">✓ LOGGED</div>
+
+<script>
+const EXERCISES = [
+  { name: "Hip Thrust",                         category: "Legs",      mode: "setsrepsweight" },
+  { name: "Squat",                              category: "Legs",      mode: "setsrepsweight" },
+  { name: "Lateral Squat",                      category: "Legs",      mode: "setsrepsweight" },
+  { name: "Iso Lunge Hold",                     category: "Legs",      mode: "setshold" },
+  { name: "Dumbbell Bench Press",               category: "Chest",     mode: "setsrepsweight" },
+  { name: "Incline Dumbbell Bench Press",       category: "Chest",     mode: "setsrepsweight" },
+  { name: "Meadows Row",                        category: "Back",      mode: "setsrepsweight" },
+  { name: "Pull-Ups",                           category: "Back",      mode: "repsonly" },
+  { name: "Standing Overhead Press",            category: "Shoulders", mode: "setsrepsweight" },
+  { name: "Single Arm Kneeling Shoulder Press", category: "Shoulders", mode: "setsrepsweight" },
+  { name: "Dips",                               category: "Arms",      mode: "repsonly" },
+  { name: "Incline Dumbbell Curl",              category: "Arms",      mode: "setsrepsweight" },
+  { name: "Tricep Pushdown",                    category: "Arms",      mode: "setsrepsweight" },
+  { name: "Half Kneeling Landmine Rotation",    category: "Core",      mode: "setsrepsweight" },
+];
+
+const CATEGORIES = ["Legs","Chest","Back","Shoulders","Arms","Core"];
+const CAT_COLORS = { Legs:"#f97316", Chest:"#22d3ee", Back:"#a3e635", Shoulders:"#f472b6", Arms:"#a78bfa", Core:"#fbbf24" };
+const STORAGE_KEY = "caoimhe-workout-tracker-v3";
+const MAX_SETS = 4;
+
+let logs = [];
+let currentView = "log";
+let srwSets = [{ reps: "", weight: "" }];
+let shSets  = [{ hold: "", weight: "" }];
+
+function formatDate(d) {
+  return new Date(d).toLocaleDateString("en-CA", { month: "short", day: "numeric" });
+}
+
+function load() {
+  try { const r = localStorage.getItem(STORAGE_KEY); if (r) logs = JSON.parse(r); } catch {}
+}
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(logs)); } catch {}
+}
+
+function getMode() {
+  const name = document.getElementById("exercise-select").value;
+  return (EXERCISES.find(e => e.name === name) || {}).mode || "setsrepsweight";
+}
+
+function getCategory(name) {
+  return (EXERCISES.find(e => e.name === name) || {}).category || "Other";
+}
+
+// ── View switching ──────────────────────────────────────────────────
+function setView(v) {
+  currentView = v;
+  ["log","history","stats"].forEach(x => {
+    document.getElementById("view-" + x).classList.toggle("hidden", x !== v);
+  });
+  document.querySelectorAll(".nav-btn").forEach((btn, i) => {
+    btn.classList.toggle("active", ["log","history","stats"][i] === v);
+  });
+  if (v === "history") renderHistory();
+  if (v === "stats")   renderStats();
+}
+
+// ── Exercise change ─────────────────────────────────────────────────
+function onExerciseChange() {
+  srwSets = [{ reps: "", weight: "" }];
+  shSets  = [{ hold: "", weight: "" }];
+  document.getElementById("note-input").value = "";
+  renderModeSections();
+}
+
+function renderModeSections() {
+  const mode = getMode();
+  document.getElementById("mode-repsonly").classList.toggle("hidden", mode !== "repsonly");
+  document.getElementById("mode-setsrepsweight").classList.toggle("hidden", mode !== "setsrepsweight");
+  document.getElementById("mode-setshold").classList.toggle("hidden", mode !== "setshold");
+  if (mode === "setsrepsweight") renderSrwRows();
+  if (mode === "setshold")       renderShRows();
+  if (mode === "repsonly")       document.getElementById("single-reps").value = "";
+}
+
+function renderSrwRows() {
+  const c = document.getElementById("sets-container-srw");
+  c.innerHTML = srwSets.map((s, i) => `
+    <div class="set-row">
+      <div class="set-label">SET ${i+1}</div>
+      <div class="set-grid">
+        <input type="number" inputmode="numeric" placeholder="reps" value="${s.reps}"
+          oninput="srwSets[${i}].reps=this.value" />
+        <input type="number" inputmode="decimal" placeholder="lbs" value="${s.weight}"
+          oninput="srwSets[${i}].weight=this.value" />
+      </div>
+      ${srwSets.length > 1 ? `<button class="rm-set" onclick="removeSrwSet(${i})">×</button>` : ""}
+    </div>
+  `).join("");
+  const btn = document.getElementById("add-set-btn-srw");
+  if (srwSets.length >= MAX_SETS) { btn.classList.add("hidden"); }
+  else { btn.classList.remove("hidden"); btn.textContent = `+ add set ${srwSets.length + 1}`; }
+}
+
+function renderShRows() {
+  const c = document.getElementById("sets-container-sh");
+  c.innerHTML = shSets.map((s, i) => `
+    <div class="set-row">
+      <div class="set-label">SET ${i+1}</div>
+      <div class="set-grid">
+        <input type="number" inputmode="numeric" placeholder="seconds" value="${s.hold}"
+          oninput="shSets[${i}].hold=this.value" />
+        <input type="number" inputmode="decimal" placeholder="lbs (opt)" value="${s.weight}"
+          oninput="shSets[${i}].weight=this.value" />
+      </div>
+      ${shSets.length > 1 ? `<button class="rm-set" onclick="removeShSet(${i})">×</button>` : ""}
+    </div>
+  `).join("");
+  const btn = document.getElementById("add-set-btn-sh");
+  if (shSets.length >= MAX_SETS) { btn.classList.add("hidden"); }
+  else { btn.classList.remove("hidden"); btn.textContent = `+ add set ${shSets.length + 1}`; }
+}
+
+function addSetRow(type) {
+  if (type === "srw" && srwSets.length < MAX_SETS) { srwSets.push({ reps: "", weight: "" }); renderSrwRows(); }
+  if (type === "sh"  && shSets.length  < MAX_SETS) { shSets.push({ hold: "", weight: "" });  renderShRows(); }
+}
+
+function removeSrwSet(i) { srwSets.splice(i, 1); renderSrwRows(); }
+function removeShSet(i)  { shSets.splice(i, 1);  renderShRows(); }
+
+// ── Log entry ───────────────────────────────────────────────────────
+function logEntry() {
+  const exercise = document.getElementById("exercise-select").value;
+  const mode     = getMode();
+  const note     = document.getElementById("note-input").value.trim();
+  let sets = [];
+
+  if (mode === "repsonly") {
+    const r = document.getElementById("single-reps").value;
+    if (!r) return;
+    sets = [{ reps: parseInt(r), weight: null, hold: null }];
+  } else if (mode === "setsrepsweight") {
+    sets = srwSets
+      .filter(s => s.reps !== "" || s.weight !== "")
+      .map(s => ({ reps: s.reps ? parseInt(s.reps) : null, weight: s.weight ? parseFloat(s.weight) : null, hold: null }));
+  } else if (mode === "setshold") {
+    sets = shSets
+      .filter(s => s.hold !== "" || s.weight !== "")
+      .map(s => ({ reps: null, weight: s.weight ? parseFloat(s.weight) : null, hold: s.hold ? parseInt(s.hold) : null }));
+  }
+
+  if (!sets.length) return;
+
+  const entry = { id: Date.now(), date: new Date().toISOString(), exercise, category: getCategory(exercise), mode, sets, note };
+  logs.unshift(entry);
+  save();
+  updateEntryCount();
+
+  // Reset
+  srwSets = [{ reps: "", weight: "" }];
+  shSets  = [{ hold: "", weight: "" }];
+  document.getElementById("note-input").value = "";
+  if (mode === "repsonly") document.getElementById("single-reps").value = "";
+  renderModeSections();
+  renderRecent();
+
+  // Toast
+  const t = document.getElementById("toast");
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1800);
+}
+
+function deleteLog(id) {
+  logs = logs.filter(l => l.id !== id);
+  save();
+  updateEntryCount();
+  renderRecent();
+  if (currentView === "history") renderHistory();
+  if (currentView === "stats")   renderStats();
+}
+
+// ── Rendering ───────────────────────────────────────────────────────
+function updateEntryCount() {
+  const n = logs.length;
+  document.getElementById("entry-count").textContent = `${n} ENTR${n !== 1 ? "IES" : "Y"} RECORDED`;
+}
+
+function renderSetTags(log) {
+  return (log.sets || []).map(s => {
+    if (log.mode === "repsonly") return `<span class="set-tag">${s.reps} reps</span>`;
+    if (log.mode === "setshold") return `<span class="set-tag">${s.hold ? s.hold+"s" : "—"}${s.weight ? " @ "+s.weight+"lbs" : ""}</span>`;
+    return `<span class="set-tag">${s.reps ?? "—"} reps${s.weight ? " @ "+s.weight+"lbs" : ""}</span>`;
+  }).join("");
+}
+
+function logCardHTML(log, showDate) {
+  const col = CAT_COLORS[log.category] || "#888";
+  return `
+    <div class="card">
+      <div class="card-row">
+        <div class="card-bar" style="background:${col}"></div>
+        <div class="card-body">
+          <div class="card-meta">
+            <div class="card-title">${log.exercise}</div>
+            ${showDate ? `<div class="card-date">${formatDate(log.date)}</div>` : ""}
+          </div>
+          <div>${renderSetTags(log)}</div>
+          ${!showDate ? `<div class="card-small-date">${formatDate(log.date)}</div>` : ""}
+          ${log.note ? `<div class="card-note">${log.note}</div>` : ""}
+        </div>
+        <button class="del-btn" onclick="deleteLog(${log.id})">×</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderRecent() {
+  const sec = document.getElementById("recent-section");
+  const list = document.getElementById("recent-list");
+  if (!logs.length) { sec.classList.add("hidden"); return; }
+  sec.classList.remove("hidden");
+  list.innerHTML = logs.slice(0, 5).map(l => logCardHTML(l, false)).join("");
+}
+
+function onFilterCatChange() {
+  const cat = document.getElementById("filter-cat").value;
+  const exSel = document.getElementById("filter-ex");
+  const exList = cat === "All"
+    ? EXERCISES.map(e => e.name)
+    : EXERCISES.filter(e => e.category === cat).map(e => e.name);
+  exSel.innerHTML = ["All", ...exList].map(ex => `<option>${ex}</option>`).join("");
+  renderHistory();
+}
+
+function renderHistory() {
+  const cat = document.getElementById("filter-cat").value;
+  const ex  = document.getElementById("filter-ex").value;
+  const filtered = logs.filter(l =>
+    (cat === "All" || l.category === cat) &&
+    (ex  === "All" || l.exercise === ex)
+  );
+  const list = document.getElementById("history-list");
+  if (!filtered.length) { list.innerHTML = `<div class="empty">Nothing logged yet.</div>`; return; }
+  list.innerHTML = filtered.map(l => logCardHTML(l, true)).join("");
+}
+
+function renderStats() {
+  const statsByEx = {};
+  logs.forEach(l => {
+    if (!statsByEx[l.exercise]) statsByEx[l.exercise] = { sessions: 0, bestWeight: 0, bestReps: 0, bestHold: 0, cat: l.category };
+    const s = statsByEx[l.exercise];
+    s.sessions++;
+    (l.sets || []).forEach(set => {
+      if (set.weight > s.bestWeight) s.bestWeight = set.weight;
+      if (set.reps   > s.bestReps)   s.bestReps   = set.reps;
+      if (set.hold   > s.bestHold)   s.bestHold   = set.hold;
+    });
+  });
+
+  if (!Object.keys(statsByEx).length) {
+    document.getElementById("stats-content").innerHTML = `<div class="empty">Log some sessions first.</div>`;
+    return;
+  }
+
+  let html = "";
+  CATEGORIES.forEach(cat => {
+    const exes = Object.entries(statsByEx).filter(([,s]) => s.cat === cat);
+    if (!exes.length) return;
+    const col = CAT_COLORS[cat];
+    html += `<div class="stats-cat">
+      <div class="stats-cat-head">
+        <span class="cat-dot" style="background:${col}"></span>
+        <span class="cat-label" style="color:${col}">${cat}</span>
+      </div>
+      <div class="log-list">
+        ${exes.map(([name, s]) => `
+          <div class="card" style="border-left:3px solid ${col}">
+            <div style="font-size:13px;font-weight:500;margin-bottom:8px">${name}</div>
+            <div class="pill-row">
+              <div><div class="pv">${s.sessions}</div><div class="pl">SESSIONS</div></div>
+              ${s.bestReps   > 0 ? `<div><div class="pv">${s.bestReps}</div><div class="pl">BEST REPS</div></div>` : ""}
+              ${s.bestWeight > 0 ? `<div><div class="pv">${s.bestWeight}<span>lbs</span></div><div class="pl">BEST LOAD</div></div>` : ""}
+              ${s.bestHold   > 0 ? `<div><div class="pv">${s.bestHold}<span>s</span></div><div class="pl">BEST HOLD</div></div>` : ""}
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>`;
+  });
+  document.getElementById("stats-content").innerHTML = html;
+}
+
+// ── Init ────────────────────────────────────────────────────────────
+load();
+updateEntryCount();
+renderModeSections();
+renderRecent();
+</script>
+
+</body>
+</html>
