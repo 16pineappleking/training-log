@@ -67,18 +67,29 @@ select option, select optgroup { background: #111; }
 .filter-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
 .empty { color: #444; font-size: 13px; text-align: center; padding-top: 40px; }
 
-.stats-cat { margin-bottom: 22px; }
-.stats-cat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
-.cat-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-.cat-label { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: .12em; }
-.pill-row { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+/* STATS */
+.stats-ex-select { margin-bottom: 18px; }
+.stats-card { background: #111; border: 1px solid #1c1c1c; border-radius: 9px; padding: 16px; margin-bottom: 14px; }
+.stats-ex-name { font-size: 15px; font-weight: 500; margin-bottom: 12px; }
+.pill-row { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
 .pv { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: .06em; line-height: 1; }
 .pv span { font-size: 13px; }
 .pl { font-size: 10px; color: #555; letter-spacing: .08em; margin-top: 1px; }
+.trend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; font-size: 12px; }
+.trend-up { color: #a3e635; }
+.trend-down { color: #ef4444; }
+.trend-flat { color: #555; }
+.trend-warn { color: #fbbf24; font-size: 11px; }
+.chart-wrap { width: 100%; overflow-x: auto; margin-top: 4px; }
+canvas { display: block; }
+.chart-label { font-size: 10px; color: #444; letter-spacing: .08em; margin-bottom: 6px; }
+.cat-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.stats-cat-head { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; margin-top: 4px; }
+.cat-label { font-family: 'Bebas Neue', sans-serif; font-size: 16px; letter-spacing: .12em; }
+.no-data { font-size: 11px; color: #444; font-style: italic; margin-top: 8px; }
 
 .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #f97316; color: #000; padding: 10px 24px; border-radius: 999px; font-size: 13px; font-family: 'Bebas Neue', sans-serif; letter-spacing: .1em; opacity: 0; transition: opacity .25s; pointer-events: none; z-index: 99; }
 .toast.show { opacity: 1; }
-
 .hidden { display: none; }
 ```
 
@@ -136,21 +147,18 @@ select option, select optgroup { background: #111; }
     </div>
 
 ```
-<!-- repsonly mode -->
 <div id="mode-repsonly" class="field hidden">
   <div class="fl">MAX BODYWEIGHT REPS (1 SET)</div>
   <input type="number" inputmode="numeric" placeholder="e.g. 5" id="single-reps" />
   <div class="helper">Unassisted reps only — don't count band-assisted</div>
 </div>
 
-<!-- setsrepsweight mode -->
 <div id="mode-setsrepsweight" class="field">
   <div class="fl">SETS — reps / lbs</div>
   <div id="sets-container-srw"></div>
   <button class="btn-addset" id="add-set-btn-srw" onclick="addSetRow('srw')">+ add set 2</button>
 </div>
 
-<!-- setshold mode -->
 <div id="mode-setshold" class="field hidden">
   <div class="fl">SETS — seconds / lbs</div>
   <div id="sets-container-sh"></div>
@@ -197,6 +205,12 @@ select option, select optgroup { background: #111; }
   <!-- STATS VIEW -->
 
   <div id="view-stats" class="hidden">
+    <div class="stats-ex-select">
+      <div class="fl">EXERCISE</div>
+      <select id="stats-ex-select" onchange="renderStats()">
+        <option value="">— select an exercise —</option>
+      </select>
+    </div>
     <div id="stats-content"></div>
   </div>
 
@@ -253,7 +267,6 @@ function getCategory(name) {
   return (EXERCISES.find(e => e.name === name) || {}).category || "Other";
 }
 
-// ── View switching ──────────────────────────────────────────────────
 function setView(v) {
   currentView = v;
   ["log","history","stats"].forEach(x => {
@@ -263,10 +276,9 @@ function setView(v) {
     btn.classList.toggle("active", ["log","history","stats"][i] === v);
   });
   if (v === "history") renderHistory();
-  if (v === "stats")   renderStats();
+  if (v === "stats")   initStats();
 }
 
-// ── Exercise change ─────────────────────────────────────────────────
 function onExerciseChange() {
   srwSets = [{ reps: "", weight: "" }];
   shSets  = [{ hold: "", weight: "" }];
@@ -330,7 +342,6 @@ function addSetRow(type) {
 function removeSrwSet(i) { srwSets.splice(i, 1); renderSrwRows(); }
 function removeShSet(i)  { shSets.splice(i, 1);  renderShRows(); }
 
-// ── Log entry ───────────────────────────────────────────────────────
 function logEntry() {
   const exercise = document.getElementById("exercise-select").value;
   const mode     = getMode();
@@ -358,7 +369,6 @@ function logEntry() {
   save();
   updateEntryCount();
 
-  // Reset
   srwSets = [{ reps: "", weight: "" }];
   shSets  = [{ hold: "", weight: "" }];
   document.getElementById("note-input").value = "";
@@ -366,7 +376,6 @@ function logEntry() {
   renderModeSections();
   renderRecent();
 
-  // Toast
   const t = document.getElementById("toast");
   t.classList.add("show");
   setTimeout(() => t.classList.remove("show"), 1800);
@@ -381,7 +390,6 @@ function deleteLog(id) {
   if (currentView === "stats")   renderStats();
 }
 
-// ── Rendering ───────────────────────────────────────────────────────
 function updateEntryCount() {
   const n = logs.length;
   document.getElementById("entry-count").textContent = `${n} ENTR${n !== 1 ? "IES" : "Y"} RECORDED`;
@@ -446,53 +454,247 @@ function renderHistory() {
   list.innerHTML = filtered.map(l => logCardHTML(l, true)).join("");
 }
 
-function renderStats() {
-  const statsByEx = {};
-  logs.forEach(l => {
-    if (!statsByEx[l.exercise]) statsByEx[l.exercise] = { sessions: 0, bestWeight: 0, bestReps: 0, bestHold: 0, cat: l.category };
-    const s = statsByEx[l.exercise];
-    s.sessions++;
-    (l.sets || []).forEach(set => {
-      if (set.weight > s.bestWeight) s.bestWeight = set.weight;
-      if (set.reps   > s.bestReps)   s.bestReps   = set.reps;
-      if (set.hold   > s.bestHold)   s.bestHold   = set.hold;
-    });
-  });
+// ── STATS ───────────────────────────────────────────────────────────
 
-  if (!Object.keys(statsByEx).length) {
-    document.getElementById("stats-content").innerHTML = `<div class="empty">Log some sessions first.</div>`;
+function initStats() {
+  // populate exercise dropdown with only exercises that have logs
+  const logged = [...new Set(logs.map(l => l.exercise))];
+  const sel = document.getElementById("stats-ex-select");
+  sel.innerHTML = `<option value="">— select an exercise —</option>` +
+    CATEGORIES.flatMap(cat => {
+      const exes = EXERCISES.filter(e => e.category === cat && logged.includes(e.name));
+      if (!exes.length) return [];
+      return [`<optgroup label="── ${cat.toUpperCase()}">`]
+        .concat(exes.map(e => `<option value="${e.name}">${e.name}</option>`))
+        .concat(["</optgroup>"]);
+    }).join("");
+  renderStats();
+}
+
+function getBestSet(sets, mode) {
+  if (mode === "repsonly") return Math.max(...sets.map(s => s.reps || 0));
+  if (mode === "setshold") return Math.max(...sets.map(s => s.hold || 0));
+  // setsrepsweight — best set by weight, then reps
+  let best = null;
+  sets.forEach(s => {
+    if (!best) { best = s; return; }
+    const w = s.weight || 0, bw = best.weight || 0;
+    const r = s.reps || 0, br = best.reps || 0;
+    if (w > bw || (w === bw && r > br)) best = s;
+  });
+  return best;
+}
+
+function drawChart(canvasId, labels, values, color, unit) {
+  const canvas = document.getElementById(canvasId);
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  const pad = { top: 10, right: 10, bottom: 28, left: 36 };
+  const cW = W - pad.left - pad.right;
+  const cH = H - pad.top - pad.bottom;
+
+  ctx.clearRect(0, 0, W, H);
+
+  if (values.length < 2) {
+    ctx.fillStyle = "#444";
+    ctx.font = "11px 'DM Mono'";
+    ctx.textAlign = "center";
+    ctx.fillText("Log more sessions to see chart", W/2, H/2);
     return;
   }
 
-  let html = "";
-  CATEGORIES.forEach(cat => {
-    const exes = Object.entries(statsByEx).filter(([,s]) => s.cat === cat);
-    if (!exes.length) return;
-    const col = CAT_COLORS[cat];
-    html += `<div class="stats-cat">
-      <div class="stats-cat-head">
-        <span class="cat-dot" style="background:${col}"></span>
-        <span class="cat-label" style="color:${col}">${cat}</span>
-      </div>
-      <div class="log-list">
-        ${exes.map(([name, s]) => `
-          <div class="card" style="border-left:3px solid ${col}">
-            <div style="font-size:13px;font-weight:500;margin-bottom:8px">${name}</div>
-            <div class="pill-row">
-              <div><div class="pv">${s.sessions}</div><div class="pl">SESSIONS</div></div>
-              ${s.bestReps   > 0 ? `<div><div class="pv">${s.bestReps}</div><div class="pl">BEST REPS</div></div>` : ""}
-              ${s.bestWeight > 0 ? `<div><div class="pv">${s.bestWeight}<span>lbs</span></div><div class="pl">BEST LOAD</div></div>` : ""}
-              ${s.bestHold   > 0 ? `<div><div class="pv">${s.bestHold}<span>s</span></div><div class="pl">BEST HOLD</div></div>` : ""}
-            </div>
-          </div>
-        `).join("")}
-      </div>
-    </div>`;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+
+  // grid lines
+  ctx.strokeStyle = "#1a1a1a";
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + (cH / 4) * i;
+    ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(pad.left + cW, y); ctx.stroke();
+    const val = max - (range / 4) * i;
+    ctx.fillStyle = "#444";
+    ctx.font = "9px 'DM Mono'";
+    ctx.textAlign = "right";
+    ctx.fillText(Math.round(val), pad.left - 4, y + 3);
+  }
+
+  // line
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.lineJoin = "round";
+  ctx.beginPath();
+  values.forEach((v, i) => {
+    const x = pad.left + (i / (values.length - 1)) * cW;
+    const y = pad.top + cH - ((v - min) / range) * cH;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
-  document.getElementById("stats-content").innerHTML = html;
+  ctx.stroke();
+
+  // dots
+  values.forEach((v, i) => {
+    const x = pad.left + (i / (values.length - 1)) * cW;
+    const y = pad.top + cH - ((v - min) / range) * cH;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  });
+
+  // x labels (show first, last, and middle if space)
+  ctx.fillStyle = "#444";
+  ctx.font = "9px 'DM Mono'";
+  ctx.textAlign = "center";
+  const showIdx = values.length <= 6
+    ? values.map((_, i) => i)
+    : [0, Math.floor(values.length / 2), values.length - 1];
+  showIdx.forEach(i => {
+    const x = pad.left + (i / (values.length - 1)) * cW;
+    ctx.fillText(labels[i], x, H - 6);
+  });
 }
 
-// ── Init ────────────────────────────────────────────────────────────
+function renderStats() {
+  const exName = document.getElementById("stats-ex-select").value;
+  const content = document.getElementById("stats-content");
+
+  if (!exName) { content.innerHTML = ""; return; }
+
+  const exDef = EXERCISES.find(e => e.name === exName);
+  const mode = exDef ? exDef.mode : "setsrepsweight";
+  const col = CAT_COLORS[exDef ? exDef.category : "Other"] || "#f97316";
+  const exLogs = logs.filter(l => l.exercise === exName).slice().reverse(); // oldest first
+
+  if (!exLogs.length) {
+    content.innerHTML = `<div class="empty">No sessions logged for this exercise yet.</div>`;
+    return;
+  }
+
+  // Build data points — best set per session
+  const dataPoints = exLogs.map(l => {
+    const best = getBestSet(l.sets || [], mode);
+    return { date: formatDate(l.date), best, sets: l.sets };
+  });
+
+  // Key metrics
+  const firstSession = dataPoints[0];
+  const lastSession  = dataPoints[dataPoints.length - 1];
+  const allBests     = dataPoints.map(d => {
+    if (mode === "repsonly" || mode === "setshold") return typeof d.best === "number" ? d.best : 0;
+    return d.best ? (d.best.weight || 0) : 0;
+  });
+  const overallBest = Math.max(...allBests);
+  const recentVal   = allBests[allBests.length - 1];
+  const firstVal    = allBests[0];
+
+  // Trend: compare last 3 sessions avg vs first 3
+  const recent3 = allBests.slice(-3);
+  const first3  = allBests.slice(0, 3);
+  const recentAvg = recent3.reduce((a,b) => a+b, 0) / recent3.length;
+  const firstAvg  = first3.reduce((a,b) => a+b, 0) / first3.length;
+  const trendPct  = firstAvg > 0 ? ((recentAvg - firstAvg) / firstAvg * 100).toFixed(1) : 0;
+  const trendDir  = recentAvg > firstAvg ? "up" : recentAvg < firstAvg ? "down" : "flat";
+
+  // Stale warning: no improvement in last 3 sessions
+  const last3 = allBests.slice(-3);
+  const isStale = last3.length >= 3 && last3.every(v => v <= last3[0]);
+  const daysSinceLast = Math.floor((Date.now() - new Date(exLogs[exLogs.length-1].date)) / 86400000);
+
+  // Best vs recent label
+  let bestLabel = "", recentLabel = "", unit = "";
+  if (mode === "repsonly") {
+    unit = "reps";
+    bestLabel   = `${overallBest} reps`;
+    recentLabel = `${recentVal} reps`;
+  } else if (mode === "setshold") {
+    unit = "s";
+    bestLabel   = `${overallBest}s`;
+    recentLabel = `${recentVal}s`;
+  } else {
+    unit = "lbs";
+    const bestEntry = dataPoints.reduce((a,b) => (b.best && b.best.weight > (a.best && a.best.weight || 0)) ? b : a);
+    bestLabel   = bestEntry.best ? `${bestEntry.best.weight}lbs × ${bestEntry.best.reps}reps` : "—";
+    recentLabel = lastSession.best ? `${lastSession.best.weight || "BW"}lbs × ${lastSession.best.reps}reps` : "—";
+  }
+
+  const trendHTML = trendDir === "up"
+    ? `<span class="trend-up">▲ ${trendPct}% overall</span>`
+    : trendDir === "down"
+    ? `<span class="trend-down">▼ ${Math.abs(trendPct)}% overall</span>`
+    : `<span class="trend-flat">→ Flat</span>`;
+
+  const staleHTML = isStale
+    ? `<div class="trend-warn">⚠ No improvement in last 3 sessions — time to push harder or deload</div>`
+    : "";
+
+  const chartId = "stats-chart-" + exName.replace(/\s+/g,"_");
+  const chartId2 = "stats-chart2-" + exName.replace(/\s+/g,"_");
+
+  // For weight chart and reps chart separately (setsrepsweight)
+  const weightVals = mode === "setsrepsweight"
+    ? dataPoints.map(d => d.best ? (d.best.weight || 0) : 0)
+    : null;
+  const repVals = mode === "setsrepsweight"
+    ? dataPoints.map(d => d.best ? (d.best.reps || 0) : 0)
+    : mode === "repsonly"
+    ? dataPoints.map(d => typeof d.best === "number" ? d.best : 0)
+    : null;
+  const holdVals = mode === "setshold"
+    ? dataPoints.map(d => typeof d.best === "number" ? d.best : 0)
+    : null;
+  const dateLabels = dataPoints.map(d => d.date);
+
+  content.innerHTML = `
+    <div class="stats-cat-head">
+      <span class="cat-dot" style="background:${col}"></span>
+      <span class="cat-label" style="color:${col}">${exDef ? exDef.category : ""}</span>
+    </div>
+    <div class="stats-card" style="border-left:3px solid ${col}">
+      <div class="stats-ex-name">${exName}</div>
+
+      <div class="pill-row">
+        <div><div class="pv">${exLogs.length}</div><div class="pl">SESSIONS</div></div>
+        <div><div class="pv" style="font-size:15px">${bestLabel}</div><div class="pl">BEST EVER</div></div>
+        <div><div class="pv" style="font-size:15px">${recentLabel}</div><div class="pl">MOST RECENT</div></div>
+      </div>
+
+      <div class="trend-row">${trendHTML}</div>
+      ${staleHTML}
+
+      ${weightVals ? `
+        <div class="chart-label">LOAD OVER TIME (lbs)</div>
+        <div class="chart-wrap">
+          <canvas id="${chartId}" width="460" height="140"></canvas>
+        </div>
+      ` : ""}
+
+      ${repVals ? `
+        <div class="chart-label" style="margin-top:14px">${mode === "repsonly" ? "REPS OVER TIME" : "REPS OVER TIME (best set)"}</div>
+        <div class="chart-wrap">
+          <canvas id="${chartId2}" width="460" height="140"></canvas>
+        </div>
+      ` : ""}
+
+      ${holdVals ? `
+        <div class="chart-label">HOLD TIME OVER TIME (seconds)</div>
+        <div class="chart-wrap">
+          <canvas id="${chartId}" width="460" height="140"></canvas>
+        </div>
+      ` : ""}
+    </div>
+  `;
+
+  // Draw charts after DOM update
+  setTimeout(() => {
+    if (weightVals) drawChart(chartId, dateLabels, weightVals, col, "lbs");
+    if (repVals)    drawChart(chartId2, dateLabels, repVals, "#888", "reps");
+    if (holdVals)   drawChart(chartId, dateLabels, holdVals, col, "s");
+  }, 0);
+}
+
+// ── Init ─────────────────────────────────────────────────────────────
 load();
 updateEntryCount();
 renderModeSections();
